@@ -177,3 +177,73 @@ if let myNumber {
 // Prints "My number is 123"
 ```
 在if语句中使用Optional Binding创建的常量和变量仅在if语句体中可用
+# Implicitly Unwrapped Optionals
+有时从程序中可以清楚的看出，Optional在第一次被定义后总有一个值。在这些情况下，对Optional值进行检查是繁琐的。
+当一个Optional的值在Optional第一次被定义后立即被确认存在，并可以确定地假定该Optional在此后的每一个点上都存在时，这些类型可定义为implicitly unwrapped optionals，使用!进行定义。
+implicitly unwrapped optionals主要用在类初始化期间。
+implicitly unwrapped optionals是一个Optional，但也可以像non-optional一样使用，不需要在每次访问optional时都解包装
+optional和implicitly unwrapped optionals在访问它们的值时的差异：
+```swift
+let possibleString: String? = "An optional string."
+let forcedString: String = possibleString!  // requires an exclamation point
+
+let assumedString: String! = "An implicitly unwrapped optional string."
+let implicitString: String = assumedString  // no need for an exclamation point
+```
+当一个变量有可能在之后变为nil时，不要将其定义为implicitly unwrapped optionals
+
+# Error Handing
+当一个函数有可能抛出异常时，使用throws关键字标识
+在调用一个可能抛出异常的函数时，使用try关键字标识
+swift会自动将错误传递到scope外，直到遇到catch
+```swift
+func makeASandwich() throws {
+    // ...
+}
+
+do {
+    try makeASandwich()
+    eatASandwich()
+} catch SandwichError.outOfCleanDishes {
+    washDishes()
+} catch SandwichError.missingIngredients(let ingredients) {
+    buyGroceries(ingredients)
+}
+```
+如果没有错误抛出，执行eatASandwich()。
+如果抛出错误并且与SandwichError.outOfCleanDishes匹配，washDishes()被调用
+如果抛出错误并且与SandwichError.missingIngredients匹配，buyGroceries(_:)被调用
+# Debugging with Assertions
+可以检查代码中的假设部分，确保错误能够被及时发现
+使用函数assert(_:_:file:line:)
+当命题为真时正常执行，为假时中断程序并打印字符串
+```swift
+let age = -3
+assert(age >= 0, "A person's age can't be less than zero.")
+// This assertion fails because -3 isn't >= 0.
+```
+如果代码已经检查了该条件，使用assertionFailure(_:file:line:)函数表示断言失败
+```swift
+if age > 10 {
+    print("You can ride the roller-coaster or the ferris wheel.")
+} else if age >= 0 {
+    print("You can ride the ferris wheel.")
+} else {
+    assertionFailure("A person's age can't be less than zero.")
+}
+```
+# Enforcing Preconditions
+当一个条件有可能为假，但必须为真代码才能继续执行时，使用前置条件。例如：使用前置条件检查下表是否越界
+通过调用precondition(_:_:file:line:)函数，当表达式的值为false时，显示一条信息
+```swift
+precondition(index > 0, "Index must be greater than zero.")
+```
+可以调用assertionFailure(_:file:line:)函数来指示发生了故障。例如：如果交换机的默认情况已经被采用，但是所有有效的输入数据都应该交由交换机的其他情况之一处理
+# Assertions and Preconditions
+assertions可以帮助程序员在开发过程中发现错误的假设，preconditions可以帮助检测生产中的问题
+assertions和preconditions是在运行时的检查
+assertions只在调试构建中检查，preconditions在调试和生产构建中都检查。这意味着在开发过程中可以使用任意数量的assertions，而不会影响生产中的性能
+
+尽管precondition在优化构建中有效，在「非检查（unchecked）」的优化构建中仍是无效的。「非检查」的构建是通过在命令行指定 -Ounchecked 来实现的。该指令的执行不仅会移除 precondition 调用，还会进行数组边界检查。这是很危险的，除非你别无选择，不得不执行该命令外尽量不要用。
+
+关于非检查构建有趣的一点是，尽管precondition检查被移除了，优化器仍会假设命题为真，并在此基础上优化下面的代码。在上述例子中，生成代码不会再检查 x 是否为负，但在接下来的编译中会默认 x >= 0。这一点对于 assert 也是成立的。
